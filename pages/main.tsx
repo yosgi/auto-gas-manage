@@ -10,12 +10,23 @@ import Typography from '@mui/material/Typography';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button';
+import Switch from '@mui/material/Switch';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import { FormGroup,FormControlLabel } from '@mui/material';
 import { useEthers, useEtherBalance } from "@usedapp/core";
-import Slider from '@mui/material/Slider';
+import FormControl from '@mui/material/FormControl';
+import Card from '@mui/material/Card';
+import CardActions from '@mui/material/CardActions';
+import CardContent from '@mui/material/CardContent';
+import InputLabel from '@mui/material/InputLabel';
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
+}
+interface AccountProps {
+  account: string;
+  [key:string]: any;
 }
 
 function TabPanel(props: TabPanelProps) {
@@ -37,17 +48,68 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
+
 const Home: NextPage = () => {
-  const [value, setValue] = React.useState<number>(1);
+  const [ETHvalue, setEthValue] = React.useState<Boolean>(false);
+  const [BSCvalue, setBscValue] = React.useState<Boolean>(false);
   const { activateBrowserWallet, account, library } = useEthers();
   const [signer, setSigner] = React.useState<undefined | JsonRpcSigner>(undefined);
-
-  const handleChange = (event: Event, newValue: number | number[]) => {
-    setValue(newValue as number);
-  };
-  const handleConnect = () => {
-    activateBrowserWallet();
+  let balances:AccountProps[] = [1,2,3,4,5].map(() => {
+    return {
+      account:'',
+      bsc:false,
+      eth:false,
+    }
+  });
+  const [balance, setBalance] = React.useState(balances);
+  console.log(balance);
+  // const handleChange = async (e: React.ChangeEvent, checked:Boolean, type: string) => {
+  //   type === 'bsc' ? setBscValue(checked):setEthValue(checked)
+  //   let res = await fetch("/api/process", {
+  //     method: "POST",
+  //     body: JSON.stringify([{
+  //       bsc:type === 'bsc' ? checked:BSCvalue,
+  //       eth:type === 'eth' ? checked:ETHvalue,
+  //       account:'64a50d67e9589a3bb06b86262771dc48d963a11d34dcb8f064faa4885d311ae4'
+  //     }]),
+  //     headers:
+  //     {
+  //         "Content-Type":
+  //         "application/json",
+  //     },
+  // });
+  // const data = await res.json();
+  // console.log(data)
+  // };
+  const handleAccount = async (account:string,index:number) => {
+    let balances = [...balance];
+    balances[index].account = account;
+    setBalance(balances);
   }
+  const handleType = async (type:string,status:Boolean,index:number) => {
+    let balances = [...balance];
+    if (balances[index]) {
+      balances[index][type] = status;
+    }
+    setBalance(balances);
+  }
+  const handleSubmit = async () => {
+      const body = balance.filter((item) => {
+        return item.account && (item.bsc || item.eth)
+      })
+      let res = await fetch("/api/process", {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers:
+        {
+            "Content-Type":
+            "application/json",
+        },
+    });
+    const data = await res.json();
+    console.log(data)
+  }
+  console.log(balance);
   function valuetext(value: number) {
     return `${value}`;
   }
@@ -69,36 +131,41 @@ const Home: NextPage = () => {
             >
               Mint NFT
             </IconButton>
-            {account ? `${account.slice(0, 6)}...${account.slice(
-                account.length - 4,
-                account.length
-              )}`:
-                <div style={{display:'flex'}}>
-                    <Button color="inherit" onClick={handleConnect}>Connect</Button>
-                </div>
-              }
-           
           </Toolbar>
-          
-        
       </AppBar>
-      <Box sx={{padding:4,fontSize:30}}>  
-            <Box component="div" sx={{ marginBottom:4 }}>
-               Mint Price per token: 0.3 ETH
-            </Box>
-            <Box sx={{ marginBottom:4 }}>
-                Maxium token per mint: 4
-            </Box>
-            <Box sx={{ marginBottom:4 }}>
-            <Box>
-              Mint count: {value}
-            </Box>
-            <Slider  onChange={handleChange} sx={{width:320}} defaultValue={1} step={1} marks min={1} max={4} getAriaValueText={valuetext} valueLabelDisplay="auto" />
-            
-            </Box>
-            <Button variant="contained" sx={{width:120,height:40}} >Mint</Button>
-    
+      <Box sx={{display: 'flex',width: '80%',flexWrap:'wrap',justifyContent: 'spcace-around',margin:'auto'}}>
+      {/* 64a50d67e9589a3bb06b86262771dc48d963a11d34dcb8f064faa4885d311ae4 */}
+      {
+        balance.map((item, index) => {
+          return (
+            <Card key={index} sx={{width:350,marginTop:5,marginRight:3}}>
+              <CardContent>
+                 
+                  <FormControl sx={{ m: 1, width: 300 }} variant="outlined">
+                  <InputLabel >account{index + 1}</InputLabel>
+                      <OutlinedInput
+                        id="account"
+                        aria-describedby="Input account"
+                        inputProps={{
+                          'aria-label': 'weight',
+                        }}
+                        onChange={(e) => handleAccount(e.target.value,index)}
+                      />
+                  </FormControl>
+                  </CardContent>
+
+                  <CardActions  sx={{display:'flex'}}>
+                    <FormControlLabel control={<Switch onChange={(event:React.ChangeEvent,checked:Boolean) => handleType('eth',checked,index)}/>} label="ETH" />
+                    <FormControlLabel control={<Switch onChange={(event:React.ChangeEvent,checked:Boolean) => handleType('bsc',checked,index)}/>} label="BSC" />
+                  </CardActions >
+      
+            </Card>
+          )
+        })
+      }
+        
       </Box>
+      <Button onClick={handleSubmit} sx={{width:200,margin:'auto',marginTop:5,display:'block'}}  variant="contained"> Submit </Button>
     </div>
   )
 }
